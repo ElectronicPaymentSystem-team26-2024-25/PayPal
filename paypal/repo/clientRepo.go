@@ -17,3 +17,12 @@ func (repo *ClientRepo) CreateClient(client *model.Client) error {
 	println("CreateClient: Rows affected: ", dbResult.RowsAffected)
 	return nil
 }
+
+func (repo *ClientRepo) GetClient(merchantId string) (*model.Client, error) {
+	var client = model.Client{}
+	dbResult := repo.DbConnection.First(&client, "merchant_id = ?", merchantId)
+	if dbResult.Error != nil {
+		return &client, dbResult.Error
+	}
+	return &client, nil
+}

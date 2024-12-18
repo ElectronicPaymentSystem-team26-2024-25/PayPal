@@ -45,11 +45,20 @@ func prepareClient(db *gorm.DB) *handler.ClientHandler {
 	return clientHandler
 }
 
+func preparePayment(db *gorm.DB) *handler.PaymentHandler {
+	clientRepo := &repo.ClientRepo{DbConnection: db}
+	paymentService := &service.PaymentService{ClientRepo: clientRepo}
+	paymentHandler := &handler.PaymentHandler{Service: paymentService}
+	return paymentHandler
+}
+
 func startServer(db *gorm.DB) {
 	clientHandler := prepareClient(db)
+	paymentHandler := preparePayment(db)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/client", clientHandler.CreateClient).Methods("POST")
+	router.HandleFunc("/payment", paymentHandler.ProcessPayment).Methods("POST")
 
 	println("Server starting")
 	log.Fatal(http.ListenAndServe(":90", router))
