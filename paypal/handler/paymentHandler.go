@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"paypay.xws.com/paypal/model"
 	"paypay.xws.com/paypal/service"
 )
@@ -25,6 +26,22 @@ func (handler *PaymentHandler) ProcessPayment(writer http.ResponseWriter, req *h
 		writer.WriteHeader(http.StatusExpectationFailed)
 		return
 	}
-	writer.WriteHeader(http.StatusOK)
+	writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(writer).Encode(response)
+}
+
+func (handler *PaymentHandler) CapturePayment(writer http.ResponseWriter, req *http.Request) {
+	orderId := mux.Vars(req)["orderId"]
+	if orderId == "" {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	response, err := handler.Service.CapturePayment(orderId)
+	if err != nil {
+		println("Error capturing payment")
+		writer.WriteHeader(http.StatusExpectationFailed)
+		return
+	}
+	writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(writer).Encode(response)
 }

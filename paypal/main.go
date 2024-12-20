@@ -21,7 +21,7 @@ func initDB() *gorm.DB {
 		print(err)
 		return nil
 	}
-	err = database.AutoMigrate(&model.Client{})
+	err = database.AutoMigrate(&model.Client{}, &model.Order{})
 	if err != nil {
 		log.Fatalf("Error migrating models: %v", err)
 	}
@@ -47,7 +47,10 @@ func prepareClient(db *gorm.DB) *handler.ClientHandler {
 
 func preparePayment(db *gorm.DB) *handler.PaymentHandler {
 	clientRepo := &repo.ClientRepo{DbConnection: db}
-	paymentService := &service.PaymentService{ClientRepo: clientRepo}
+	orderRepo := &repo.OrderRepo{DbConnection: db}
+	paymentService := &service.PaymentService{
+		ClientRepo: clientRepo,
+		OrderRepo:  orderRepo}
 	paymentHandler := &handler.PaymentHandler{Service: paymentService}
 	return paymentHandler
 }
@@ -59,6 +62,7 @@ func startServer(db *gorm.DB) {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/client", clientHandler.CreateClient).Methods("POST")
 	router.HandleFunc("/payment", paymentHandler.ProcessPayment).Methods("POST")
+	router.HandleFunc("/payment/{orderId}", paymentHandler.CapturePayment).Methods("PUT")
 
 	println("Server starting")
 	log.Fatal(http.ListenAndServe(":90", router))
