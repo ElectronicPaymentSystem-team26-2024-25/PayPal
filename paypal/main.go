@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/joho/godotenv"
 
 	"github.com/gorilla/mux"
 	"gorm.io/driver/postgres"
@@ -28,7 +31,15 @@ func initDB() *gorm.DB {
 	return database
 }
 
+func initEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
 func main() {
+	initEnv()
 	database := initDB()
 	if database == nil {
 		print("FAILED TO CONNECT TO DB")
@@ -60,10 +71,10 @@ func startServer(db *gorm.DB) {
 	paymentHandler := preparePayment(db)
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/client", clientHandler.CreateClient).Methods("POST")
-	router.HandleFunc("/payment", paymentHandler.ProcessPayment).Methods("POST")
-	router.HandleFunc("/payment/{orderId}", paymentHandler.CapturePayment).Methods("PUT")
+	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/client", clientHandler.CreateClient).Methods("POST")
+	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment", paymentHandler.ProcessPayment).Methods("POST")
+	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment/{orderId}", paymentHandler.CapturePayment).Methods("PUT")
 
 	println("Server starting")
-	log.Fatal(http.ListenAndServe(":90", router))
+	log.Fatal(http.ListenAndServe(os.Getenv("SERVICE_PORT"), router))
 }

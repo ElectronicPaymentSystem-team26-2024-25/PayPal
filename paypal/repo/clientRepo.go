@@ -26,3 +26,11 @@ func (repo *ClientRepo) GetClient(merchantId string) (*model.Client, error) {
 	}
 	return &client, nil
 }
+
+func (repo *ClientRepo) UpdateClient(client *model.Client) (*model.Client, error) {
+	dbResult := repo.DbConnection.Save(client)
+	if dbResult.Error != nil {
+		return nil, dbResult.Error
+	}
+	return client, nil
+}
