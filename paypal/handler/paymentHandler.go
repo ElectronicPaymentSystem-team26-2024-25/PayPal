@@ -26,6 +26,7 @@ func (handler *PaymentHandler) ProcessPayment(writer http.ResponseWriter, req *h
 		writer.WriteHeader(http.StatusExpectationFailed)
 		return
 	}
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(writer).Encode(response)
 }
@@ -42,6 +43,7 @@ func (handler *PaymentHandler) CapturePayment(writer http.ResponseWriter, req *h
 		writer.WriteHeader(http.StatusExpectationFailed)
 		return
 	}
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(writer).Encode(response)
 }

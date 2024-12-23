@@ -26,6 +26,7 @@ func (handler *ClientHandler) CreateClient(writer http.ResponseWriter, req *http
 		writer.WriteHeader(http.StatusExpectationFailed)
 		return
 	}
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
 	json.NewEncoder(writer).Encode(response)
 }

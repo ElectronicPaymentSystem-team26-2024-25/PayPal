@@ -10,11 +10,6 @@ type ClientService struct {
 }
 
 func (service *ClientService) CreateClient(client *model.Client) (*model.Client, error) {
-	clientDB, _ := service.Repo.GetClient(client.MerchantId)
-	if clientDB != nil { //TODO: If client exists, exit
-		return nil, nil
-	}
-
 	err := service.Repo.CreateClient(client)
 	if err != nil {
 		return nil, err
