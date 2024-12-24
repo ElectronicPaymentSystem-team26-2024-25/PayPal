@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
 	"os"
@@ -40,13 +41,23 @@ func initEnv() {
 
 func main() {
 	initEnv()
+
+	serverTLSCert, err := tls.LoadX509KeyPair(os.Getenv("CERT_PATH"), os.Getenv("CERT_KEY_PATH"))
+	if err != nil {
+		log.Fatalf("Error loading certificate and key file: %v", err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverTLSCert},
+	}
+
 	database := initDB()
 	if database == nil {
 		print("FAILED TO CONNECT TO DB")
 		return
 	}
 
-	startServer(database)
+	startServer(database, tlsConfig)
 }
 
 func prepareClient(db *gorm.DB) *handler.ClientHandler {
@@ -66,7 +77,7 @@ func preparePayment(db *gorm.DB) *handler.PaymentHandler {
 	return paymentHandler
 }
 
-func startServer(db *gorm.DB) {
+func startServer(db *gorm.DB, tlsConfig *tls.Config) {
 	clientHandler := prepareClient(db)
 	paymentHandler := preparePayment(db)
 
@@ -75,6 +86,12 @@ func startServer(db *gorm.DB) {
 	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment", paymentHandler.ProcessPayment).Methods("POST")
 	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment/{orderId}", paymentHandler.CapturePayment).Methods("PUT")
 
-	println("Server starting")
-	log.Fatal(http.ListenAndServe(os.Getenv("SERVICE_PORT"), router))
+	server := &http.Server{
+		Addr:      os.Getenv("SERVICE_PORT"),
+		Handler:   router,
+		TLSConfig: tlsConfig,
+	}
+
+	println("HTTPS server starting on", os.Getenv("SERVICE_PORT"))
+	log.Fatal(server.ListenAndServeTLS("", ""))
 }
