@@ -14,8 +14,8 @@ type PaymentService struct {
 	OrderRepo  *repo.OrderRepo
 }
 
-func (service *PaymentService) ProcessPayment(paymentReq *model.PaymentRequest) (*model.PaymentResponse, error) {
-	paymentRes := model.PaymentResponse{}
+func (service *PaymentService) ProcessPayment(paymentReq *model.PaymentRequest) (*model.PaymentApproveLink, error) {
+	paymentRes := model.PaymentApproveLink{}
 
 	c, err := service.generatePayPalClient(paymentReq.MerchantId)
 	if err != nil {
@@ -39,6 +39,11 @@ func (service *PaymentService) CapturePayment(ppOrderId string) (*model.PaymentR
 		return nil, err
 	}
 
+	paymentRes.MerchantOrderId = order.OrderId
+	paymentRes.AcquirerOrderId = order.PaypalOrderId
+	paymentRes.AcquirerTimestamp = order.TimeStamp
+	paymentRes.PaymentId = 2 //TODO: Change this
+
 	c, err := service.generatePayPalClient(order.MerchantId)
 	if err != nil {
 		return nil, err
@@ -50,17 +55,16 @@ func (service *PaymentService) CapturePayment(ppOrderId string) (*model.PaymentR
 	}
 	orderRes, err := c.CaptureOrder(ctx, order.PaypalOrderId, orderReq)
 	if err != nil {
+		//TODO: Order is not successfull, update paymentRes
 		return nil, err
 	}
 	if orderRes.Status == "COMPLETED" {
 		err := service.updateOrder(order, model.Success)
 		if err != nil {
-			paymentRes.Message = "Could not update the order"
-		} else {
-			paymentRes.Message = "Order completed successfully"
+			paymentRes.FailReason = "Could not update the order"
 		}
 	} else {
-		paymentRes.Message = "Order couldn't be completed"
+		paymentRes.FailReason = "Order couldn't be completed"
 	}
 	return &paymentRes, nil
 }
@@ -91,7 +95,7 @@ func getApproveLink(order *paypal.Order) string {
 
 func (service *PaymentService) saveOrder(paymentReq *model.PaymentRequest, ppOrder *paypal.Order) {
 	order := &model.Order{
-		OrderId:       paymentReq.OrderId,
+		OrderId:       paymentReq.MerchantOrderId,
 		MerchantId:    paymentReq.MerchantId,
 		Amount:        paymentReq.Amount,
 		PaypalOrderId: ppOrder.ID,
@@ -113,19 +117,19 @@ func createOrder(c *paypal.Client, paymentReq *model.PaymentRequest) (*paypal.Or
 	units := []paypal.PurchaseUnitRequest{
 		{
 			Amount: &paypal.PurchaseUnitAmount{
-				Currency: paymentReq.Currency, //TODO: Change to USD
+				Currency: "USD",
 				Value:    paymentReq.Amount},
 		},
 	}
-	//TODO: Add ReturnURL, CancelURL
-	//TODO: Change returnUrl to be less coupled with PSP
+	returnUrl := paymentReq.SucessUrl + paymentReq.MerchantOrderId
 	//TODO: CancelUrl should be to merchant's webshop
-	returnUrl := "http://localhost:4200/success/" + paymentReq.OrderId
+	cancelUrl := "https://webshop-client:5173/"
 
 	appCtx := &paypal.ApplicationContext{
 		UserAction: paypal.UserActionPayNow,
 		BrandName:  paymentReq.BrandName,
 		ReturnURL:  returnUrl,
+		CancelURL:  cancelUrl,
 	}
 	order, err := c.CreateOrder(ctx, paypal.OrderIntentCapture, units, nil, appCtx)
 
