@@ -14,6 +14,7 @@ const (
 	Success
 )
 
+// TODO: Encrypt everything except Id, Amount, OrderStatus, Timestamp
 type Order struct {
 	Id            int64 `json:"id"`
 	OrderId       string

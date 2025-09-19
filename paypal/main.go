@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"paypay.xws.com/paypal/configuration"
 	"paypay.xws.com/paypal/handler"
 	"paypay.xws.com/paypal/model"
 	"paypay.xws.com/paypal/repo"
@@ -56,6 +57,8 @@ func main() {
 		print("FAILED TO CONNECT TO DB")
 		return
 	}
+
+	configuration.EurekaClientConfig()
 
 	startServer(database, tlsConfig)
 }
