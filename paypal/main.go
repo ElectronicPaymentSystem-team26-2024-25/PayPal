@@ -26,7 +26,7 @@ func initDB() *gorm.DB {
 		print(err)
 		return nil
 	}
-	err = database.AutoMigrate(&model.Client{}, &model.Order{})
+	err = database.AutoMigrate(&model.Client{}, &model.Order{}, &model.OrderSecurityContext{})
 	if err != nil {
 		log.Fatalf("Error migrating models: %v", err)
 	}
@@ -70,19 +70,22 @@ func prepareClient(db *gorm.DB) *handler.ClientHandler {
 	return clientHandler
 }
 
-func preparePayment(db *gorm.DB) *handler.PaymentHandler {
+func preparePayment(db *gorm.DB, securityRepo *repo.SecurityRepo) *handler.PaymentHandler {
 	clientRepo := &repo.ClientRepo{DbConnection: db}
 	orderRepo := &repo.OrderRepo{DbConnection: db}
 	paymentService := &service.PaymentService{
-		ClientRepo: clientRepo,
-		OrderRepo:  orderRepo}
+		ClientRepo:   clientRepo,
+		OrderRepo:    orderRepo,
+		SecurityRepo: securityRepo}
 	paymentHandler := &handler.PaymentHandler{Service: paymentService}
 	return paymentHandler
 }
 
 func startServer(db *gorm.DB, tlsConfig *tls.Config) {
+	securityRepo := &repo.SecurityRepo{DbConnection: db}
+
 	clientHandler := prepareClient(db)
-	paymentHandler := preparePayment(db)
+	paymentHandler := preparePayment(db, securityRepo)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/client", clientHandler.CreateClient).Methods("POST")

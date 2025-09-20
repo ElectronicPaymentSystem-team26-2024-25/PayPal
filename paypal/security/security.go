@@ -4,11 +4,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+	"math/rand"
 	"os"
 )
-
-// This is IV, TODO: Change this to be unique for all different objects and save it to DB
-var bytes = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
 
 func Encode(b []byte) string {
 	return base64.StdEncoding.EncodeToString(b)
@@ -22,7 +20,7 @@ func Decode(s string) []byte {
 	return data
 }
 
-func Encrypt(textToEncrypt string) (string, error) {
+func Encrypt(textToEncrypt string, bytes []byte) (string, error) {
 	block, err := aes.NewCipher([]byte(os.Getenv("AES_SECRET")))
 	if err != nil {
 		return "", err
@@ -34,7 +32,7 @@ func Encrypt(textToEncrypt string) (string, error) {
 	return Encode(cipherText), nil
 }
 
-func Decrypt(text string) (string, error) {
+func Decrypt(text string, bytes []byte) (string, error) {
 	block, err := aes.NewCipher([]byte(os.Getenv("AES_SECRET")))
 	if err != nil {
 		return "", err
@@ -44,4 +42,15 @@ func Decrypt(text string) (string, error) {
 	plainText := make([]byte, len(cipherText))
 	cfb.XORKeyStream(plainText, cipherText)
 	return string(plainText), nil
+}
+
+func CreateIV() []byte {
+	max := 100
+	min := 1
+	vector := []byte{}
+	for i := 0; i < 16; i++ {
+		randInt := rand.Intn(max-min) + min
+		vector = append(vector, byte(randInt))
+	}
+	return vector
 }

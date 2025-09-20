@@ -14,7 +14,6 @@ const (
 	Success
 )
 
-// TODO: Encrypt everything except Id, Amount, OrderStatus, Timestamp
 type Order struct {
 	Id            int64 `json:"id"`
 	OrderId       string
@@ -26,5 +25,15 @@ type Order struct {
 }
 
 func (order *Order) BeforeCreate(scope *gorm.DB) error {
+	return nil
+}
+
+type OrderSecurityContext struct {
+	Id      int64 `json:"id"`
+	OrderId int64 `json:"order_id"`
+	IVector []byte
+}
+
+func (ctx *OrderSecurityContext) BeforeCreate(scope *gorm.DB) error {
 	return nil
 }

@@ -2,16 +2,19 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/plutov/paypal/v4"
 	"paypay.xws.com/paypal/model"
 	"paypay.xws.com/paypal/repo"
+	"paypay.xws.com/paypal/security"
 )
 
 type PaymentService struct {
-	ClientRepo *repo.ClientRepo
-	OrderRepo  *repo.OrderRepo
+	ClientRepo   *repo.ClientRepo
+	OrderRepo    *repo.OrderRepo
+	SecurityRepo *repo.SecurityRepo
 }
 
 func (service *PaymentService) ProcessPayment(paymentReq *model.PaymentRequest) (*model.PaymentApproveLink, error) {
@@ -33,18 +36,26 @@ func (service *PaymentService) ProcessPayment(paymentReq *model.PaymentRequest) 
 }
 
 func (service *PaymentService) CapturePayment(ppOrderId string) (*model.PaymentResponse, error) {
+	fmt.Print("Trying to capture payment")
 	var paymentRes = model.PaymentResponse{}
 	order, err := service.OrderRepo.GetOrder(ppOrderId)
 	if err != nil {
 		return nil, err
 	}
 
-	paymentRes.MerchantOrderId = order.OrderId
+	secCtx, err1 := service.SecurityRepo.GetOrder(order.Id)
+	if err1 != nil {
+		return nil, err1
+	}
+	decMerchantOrderId, _ := security.Decrypt(order.OrderId, secCtx.IVector)
+	decMerchantId, _ := security.Decrypt(order.MerchantId, secCtx.IVector)
+
+	paymentRes.MerchantOrderId = decMerchantOrderId
 	paymentRes.AcquirerOrderId = order.PaypalOrderId
 	paymentRes.AcquirerTimestamp = order.TimeStamp
 	paymentRes.PaymentId = 2 //TODO: Change this
 
-	c, err := service.generatePayPalClient(order.MerchantId)
+	c, err := service.generatePayPalClient(decMerchantId)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +70,7 @@ func (service *PaymentService) CapturePayment(ppOrderId string) (*model.PaymentR
 		return nil, err
 	}
 	if orderRes.Status == "COMPLETED" {
+		fmt.Print("Order completed")
 		err := service.updateOrder(order, model.Success)
 		if err != nil {
 			paymentRes.FailReason = "Could not update the order"
@@ -94,14 +106,25 @@ func getApproveLink(order *paypal.Order) string {
 }
 
 func (service *PaymentService) saveOrder(paymentReq *model.PaymentRequest, ppOrder *paypal.Order) {
+	bytes := security.CreateIV()
+
+	encOrderId, _ := security.Encrypt(paymentReq.MerchantOrderId, bytes)
+	encMerchantId, _ := security.Encrypt(paymentReq.MerchantId, bytes)
+
 	order := &model.Order{
-		OrderId:       paymentReq.MerchantOrderId,
-		MerchantId:    paymentReq.MerchantId,
+		OrderId:       encOrderId,
+		MerchantId:    encMerchantId,
 		Amount:        paymentReq.Amount,
 		PaypalOrderId: ppOrder.ID,
 		TimeStamp:     time.Now(),
 	}
 	service.OrderRepo.CreateOrder(order)
+
+	orderSecCtx := &model.OrderSecurityContext{
+		OrderId: order.Id,
+		IVector: bytes,
+	}
+	service.SecurityRepo.CreateOrder(orderSecCtx)
 }
 
 func (service *PaymentService) updateOrder(order *model.Order, newStatus model.Status) error {
@@ -122,6 +145,7 @@ func createOrder(c *paypal.Client, paymentReq *model.PaymentRequest) (*paypal.Or
 		},
 	}
 	returnUrl := paymentReq.SucessUrl + paymentReq.MerchantOrderId
+	fmt.Print(returnUrl)
 	//TODO: CancelUrl should be to merchant's webshop
 	cancelUrl := "https://webshop-client:5173/"
 

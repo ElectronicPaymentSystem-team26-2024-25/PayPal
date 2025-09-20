@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"fmt"
+
 	"gorm.io/gorm"
 	"paypay.xws.com/paypal/model"
 )
@@ -28,6 +30,7 @@ func (repo *OrderRepo) GetOrder(orderId string) (*model.Order, error) {
 }
 
 func (repo *OrderRepo) UpdateOrder(order *model.Order) (*model.Order, error) {
+	fmt.Print(order)
 	dbResult := repo.DbConnection.Save(order)
 	if dbResult.Error != nil {
 		return nil, dbResult.Error
