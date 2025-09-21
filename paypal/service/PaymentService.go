@@ -67,8 +67,8 @@ func (service *PaymentService) CapturePayment(ppOrderId string) (*model.PaymentR
 	}
 	orderRes, err := c.CaptureOrder(ctx, order.PaypalOrderId, orderReq)
 	if err != nil {
-		//TODO: Order is not successfull, update paymentRes
-		return nil, err
+		paymentRes.FailReason = "Could not capture payment from PayPal API"
+		return &paymentRes, err
 	}
 	if orderRes.Status == "COMPLETED" {
 		fmt.Print("Order completed")
@@ -148,7 +148,7 @@ func createOrder(c *paypal.Client, paymentReq *model.PaymentRequest) (*paypal.Or
 	returnUrl := paymentReq.SucessUrl + paymentReq.MerchantOrderId
 	fmt.Print(returnUrl)
 	//TODO: CancelUrl should be to merchant's webshop
-	cancelUrl := "https://webshop-client:5173/"
+	cancelUrl := "https://localhost:5173/"
 
 	appCtx := &paypal.ApplicationContext{
 		UserAction: paypal.UserActionPayNow,

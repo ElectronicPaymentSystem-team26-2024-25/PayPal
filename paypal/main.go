@@ -90,7 +90,7 @@ func startServer(db *gorm.DB, tlsConfig *tls.Config) {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/client", clientHandler.CreateClient).Methods("POST")
 	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment", paymentHandler.ProcessPayment).Methods("POST")
-	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment/{orderId}", paymentHandler.CapturePayment).Methods("PUT")
+	router.HandleFunc(os.Getenv("BASE_API_ENDPOINT")+"/payment/{orderId}", paymentHandler.CapturePayment).Methods("GET")
 
 	server := &http.Server{
 		Addr:      os.Getenv("SERVICE_PORT"),
