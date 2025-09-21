@@ -13,5 +13,5 @@ type PaymentResponse struct {
 
 // TODO: This should be expanded in case something wrong happens
 type PaymentApproveLink struct {
-	Message string
+	Message string "json:`message`"
 }

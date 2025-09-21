@@ -18,6 +18,7 @@ type PaymentService struct {
 }
 
 func (service *PaymentService) ProcessPayment(paymentReq *model.PaymentRequest) (*model.PaymentApproveLink, error) {
+	fmt.Print(paymentReq)
 	paymentRes := model.PaymentApproveLink{}
 
 	c, err := service.generatePayPalClient(paymentReq.MerchantId)
